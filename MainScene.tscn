@@ -1,0 +1,34 @@
+[gd_scene load_steps=3 format=3 uid="uid://c3lr0y7scl1vg"]
+
+[ext_resource type="Script" uid="uid://b50jku30k03bq" path="res://scripts/PipeSpawner.gd" id="1_x4av3"]
+[ext_resource type="Script" uid="uid://bomqv7vdng6tl" path="res://scripts/GameManager.gd" id="2_rpqi1"]
+
+[node name="MainScene" type="Node2D"]
+
+[node name="BirdContainer" type="Node2D" parent="."]
+
+[node name="PipeSpawner" type="Node2D" parent="."]
+script = ExtResource("1_x4av3")
+
+[node name="GameUI" type="CanvasLayer" parent="."]
+
+[node name="ScoreLabel" type="Label" parent="GameUI"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_right = 61.0
+offset_bottom = 23.0
+text = "Score: 0"
+
+[node name="GameOverLabel" type="Label" parent="GameUI"]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_right = 172.0
+offset_bottom = 49.0
+text = "Game Over
+Press Space to Restart"
+
+[node name="GameManager" type="Node2D" parent="."]
+script = ExtResource("2_rpqi1")

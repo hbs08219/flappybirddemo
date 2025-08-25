@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://dxdda0bewn7dy"]
+
+[node name="Pipe" type="Node2D"]
+
+[node name="PipeContainer" type="Node2D" parent="."]
+
+[node name="TopPipe" type="Sprite2D" parent="PipeContainer"]
+rotation = 3.14159
+
+[node name="TopPipeCollision" type="CollisionShape2D" parent="PipeContainer/TopPipe"]
+
+[node name="BottomPipe" type="Sprite2D" parent="PipeContainer"]
+
+[node name="BottomPipeCollision" type="CollisionShape2D" parent="PipeContainer/BottomPipe"]
