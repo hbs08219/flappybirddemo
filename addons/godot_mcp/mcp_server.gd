@@ -7,7 +7,8 @@ var handshake_timeout := 3000 # ms
 var debug_mode := true
 var log_detailed := true  # Enable detailed logging
 var command_handler = null  # Command handler reference
-var mcp_panel = null  # Reference to MCP panel UI
+var mcp_panel = null  # Reference to the MCP panel
+var _log_lines: Array = []  # Persisted server logs buffer
 
 signal client_connected(id)
 signal client_disconnected(id)
@@ -37,25 +38,25 @@ var next_client_id := 1
 func _enter_tree():
 	# Store plugin instance for EditorInterface access
 	Engine.set_meta("GodotMCPPlugin", self)
-
+	
 	print("\n=== MCP SERVER STARTING ===")
-
-	# Load MCP panel scene
-	print("Loading MCP panel...")
-	var panel_scene = load("res://addons/godot_mcp/ui/mcp_panel.tscn")
-	mcp_panel = panel_scene.instantiate()
-	mcp_panel.websocket_server = self
-	add_child(mcp_panel)
-
-	# Add the panel to the editor dock
-	var editor_interface = get_editor_interface()
-	editor_interface.add_control_to_dock(EditorInterface.DOCK_RIGHT_UL, mcp_panel)
-
+	
 	# Initialize the command handler
 	print("Creating command handler...")
 	command_handler = preload("res://addons/godot_mcp/command_handler.gd").new()
 	command_handler.name = "CommandHandler"
 	add_child(command_handler)
+	
+	# Create and add MCP panel to editor dock if not present
+	if mcp_panel == null:
+		var panel_scene = preload("res://addons/godot_mcp/ui/mcp_panel.tscn")
+		mcp_panel = panel_scene.instantiate()
+		# 先将插件作为面板的数据源，以便连接信号并记录日志
+		if mcp_panel.has_node("") or true:
+			mcp_panel.websocket_server = self
+		# 将面板加入右侧上部 Dock（可按需调整槽位）
+		add_control_to_dock(DOCK_SLOT_RIGHT_UL, mcp_panel)
+		print("MCP panel instantiated and added to editor dock")
 	
 	# Connect signals
 	print("Connecting command handler signals...")
@@ -81,19 +82,47 @@ func _exit_tree():
 	
 	clients.clear()
 	
+	# 从 Dock 移除并释放面板
+	if mcp_panel:
+		remove_control_from_docks(mcp_panel)
+		mcp_panel.queue_free()
+		mcp_panel = null
+	
 	print("=== MCP SERVER SHUTDOWN ===")
+
+# Method to set the MCP panel reference
+func set_mcp_panel(panel):
+	mcp_panel = panel
+	print("MCP panel reference set")
+
+	# 将已有缓冲刷新到面板显示（可选）
+	if mcp_panel and _log_lines.size() > 0 and mcp_panel.has_method("get_log_text"):
+		# 如果面板是空的，则用缓冲填充
+		var current: String = mcp_panel.get_log_text()
+		if current == "":
+			var all_text: String = "\n".join(_log_lines)
+			if mcp_panel.has("log_text"):
+				mcp_panel.log_text.text = all_text
+
+# Method to get the MCP panel (required by log commands)
+func get_mcp_panel():
+	return mcp_panel
+
+# Append a log line into persisted buffer
+func append_log(message: String) -> void:
+	_log_lines.append(message)
+
+# Get all logs text from buffer
+func get_logs_text() -> String:
+	return "\n".join(_log_lines)
+
+# Clear logs buffer
+func clear_logs() -> void:
+	_log_lines.clear()
 
 func _log(client_id, message):
 	if log_detailed:
 		print("[Client ", client_id, "] ", message)
-		
-	# Also log to MCP panel if available
-	if mcp_panel:
-		mcp_panel._log_message("[Client " + str(client_id) + "] " + message)
-
-func get_mcp_panel():
-	"""Get a reference to the MCP panel UI"""
-	return mcp_panel
 
 func _process(_delta):
 	if not tcp_server.is_listening():
@@ -281,7 +310,7 @@ func stop_server() -> void:
 	if is_server_active():
 		tcp_server.stop()
 		clients.clear()
-		print("MCP WebSocket server stopped")
+		print_debug("MCP WebSocket server stopped")
 		
 func get_port() -> int:
 	return port
