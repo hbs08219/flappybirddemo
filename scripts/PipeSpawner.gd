@@ -1,4 +1,4 @@
-class_name PipeSpawnera
+class_name PipeSpawner
 extends Node2D
 
 # 游戏参数
