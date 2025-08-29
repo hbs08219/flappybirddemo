@@ -85,8 +85,60 @@ func _mark_scene_modified() -> void:
 	var edited_scene_root = editor_interface.get_edited_scene_root()
 	
 	if edited_scene_root:
-		# This internally marks the scene as modified in the editor
-		editor_interface.mark_scene_as_unsaved()
+		# 使用正确的Godot 4.x API来标记场景为已修改
+		# 方法1：尝试使用新的API
+		if editor_interface.has_method("mark_scene_as_unsaved"):
+			editor_interface.mark_scene_as_unsaved()
+		# 方法2：尝试使用资源修改标记
+		elif edited_scene_root.has_method("set_edited"):
+			edited_scene_root.set_edited(true)
+		# 方法3：强制触发编辑器更新
+		else:
+			# 通过修改节点来触发编辑器更新
+			var temp_property = edited_scene_root.get("name")
+			edited_scene_root.set("name", temp_property)
+			edited_scene_root.set("name", temp_property)
+		
+		print("Scene marked as modified")
+		
+		# 尝试强制保存场景
+		_force_scene_save(editor_interface, edited_scene_root)
+	else:
+		print("No edited scene found to mark as modified")
+
+# 新增：强制保存场景的函数
+func _force_scene_save(editor_interface, edited_scene_root) -> void:
+	# 尝试使用编辑器的保存机制
+	if editor_interface.has_method("save_scene"):
+		var result = editor_interface.save_scene()
+		if result == OK:
+			print("Scene saved successfully")
+		else:
+			print("Failed to save scene, result: ", result)
+	elif editor_interface.has_method("save_current_scene"):
+		var result = editor_interface.save_current_scene()
+		if result == OK:
+			print("Current scene saved successfully")
+		else:
+			print("Failed to save current scene, result: ", result)
+	else:
+		print("No save method available on editor interface")
+		
+		# 备用方案：手动保存场景文件
+		var scene_path = edited_scene_root.scene_file_path
+		if scene_path and scene_path != "":
+			var packed_scene = PackedScene.new()
+			var result = packed_scene.pack(edited_scene_root)
+			if result == OK:
+				var save_result = ResourceSaver.save(packed_scene, scene_path)
+				if save_result == OK:
+					print("Scene manually saved to: ", scene_path)
+				else:
+					print("Failed to manually save scene, error: ", save_result)
+			else:
+				print("Failed to pack scene, error: ", result)
+		else:
+			print("Scene has no file path, cannot save")
 
 # Helper function to access the EditorUndoRedoManager
 func _get_undo_redo():
@@ -99,6 +151,11 @@ func _get_undo_redo():
 
 # Helper function to parse property values from string to proper Godot types
 func _parse_property_value(value):
+	# 处理资源路径字符串
+	if typeof(value) == TYPE_STRING and value.begins_with("res://"):
+		print("Detected resource path: %s" % value)
+		return _load_resource_from_path(value)
+	
 	# Only try to parse strings that look like they could be Godot types
 	if typeof(value) == TYPE_STRING and (
 		value.begins_with("Vector") or 
@@ -136,3 +193,74 @@ func _parse_property_value(value):
 	
 	# Otherwise, return value as is
 	return value
+
+# 新增：从路径加载资源的函数
+func _load_resource_from_path(path: String):
+	print("Attempting to load resource from path: %s" % path)
+	
+	# 检查文件是否存在
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		print("ERROR: File does not exist or cannot be accessed: %s" % path)
+		return null
+	file.close()
+	
+	# 根据文件扩展名智能加载资源
+	var extension = path.get_extension().to_lower()
+	var resource = null
+	
+	match extension:
+		"png", "jpg", "jpeg", "webp", "tga", "bmp":
+			print("Loading texture from: %s" % path)
+			resource = load(path)
+			if resource:
+				print("Successfully loaded texture: %s" % resource)
+			else:
+				print("Failed to load texture from: %s" % path)
+		
+		"ogg", "wav", "mp3", "flac":
+			print("Loading audio from: %s" % path)
+			resource = load(path)
+			if resource:
+				print("Successfully loaded audio: %s" % resource)
+			else:
+				print("Failed to load audio from: %s" % path)
+		
+		"ttf", "otf":
+			print("Loading font from: %s" % path)
+			resource = load(path)
+			if resource:
+				print("Successfully loaded font: %s" % resource)
+			else:
+				print("Failed to load font from: %s" % path)
+		
+		"tscn", "scn":
+			print("Loading scene from: %s" % path)
+			resource = load(path)
+			if resource:
+				print("Successfully loaded scene: %s" % resource)
+			else:
+				print("Failed to load scene from: %s" % path)
+		
+		"tres", "res":
+			print("Loading resource from: %s" % path)
+			resource = load(path)
+			if resource:
+				print("Successfully loaded resource: %s" % resource)
+			else:
+				print("Failed to load resource from: %s" % path)
+		
+		_:
+			print("Unknown file extension: %s, attempting generic load" % extension)
+			resource = load(path)
+			if resource:
+				print("Successfully loaded resource with unknown extension: %s" % resource)
+			else:
+				print("Failed to load resource with unknown extension: %s" % path)
+	
+	if resource:
+		print("Resource loaded successfully: %s (Type: %s)" % [resource, resource.get_class()])
+		return resource
+	else:
+		print("ERROR: Failed to load resource from path: %s" % path)
+		return null

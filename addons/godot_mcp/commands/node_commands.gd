@@ -150,28 +150,52 @@ func _update_node_property(client_id: int, params: Dictionary, command_id: Strin
 	# Get current property value for undo
 	var old_value = node.get(property_name)
 	
+	print("Updating property %s on node %s from %s to %s" % [property_name, node_path, str(old_value), str(parsed_value)])
+	
 	# Get undo/redo system
 	var undo_redo = _get_undo_redo()
 	if not undo_redo:
+		print("UndoRedo not available, using direct property update")
 		# Fallback method if we can't get undo/redo
 		node.set(property_name, parsed_value)
+		
+		# 强制标记场景为已修改
+		_mark_scene_modified()
+		
+		# 等待一帧确保更改生效
+		await get_tree().process_frame
+		
+		# 再次尝试保存
 		_mark_scene_modified()
 	else:
+		print("Using UndoRedo system for property update")
 		# Use undo/redo for proper editor integration
 		undo_redo.create_action("Update Property: " + property_name)
 		undo_redo.add_do_property(node, property_name, parsed_value)
 		undo_redo.add_undo_property(node, property_name, old_value)
 		undo_redo.commit_action()
+		
+		# 等待undo/redo操作完成
+		await get_tree().process_frame
 	
-	# Mark the scene as modified
-	_mark_scene_modified()
-	
-	_send_success(client_id, {
-		"node_path": node_path,
-		"property": property_name,
-		"value": property_value,
-		"parsed_value": str(parsed_value)
-	}, command_id)
+	# 验证属性是否真的被更新了
+	var new_value = node.get(property_name)
+	if new_value != old_value:
+		print("Property update successful: %s = %s" % [property_name, str(new_value)])
+		
+		# 强制保存场景
+		_mark_scene_modified()
+		
+		_send_success(client_id, {
+			"node_path": node_path,
+			"property": property_name,
+			"old_value": str(old_value),
+			"new_value": str(new_value),
+			"parsed_value": str(parsed_value)
+		}, command_id)
+	else:
+		print("Property update failed - value unchanged")
+		return _send_error(client_id, "Property update failed - value unchanged", command_id)
 
 func _get_node_properties(client_id: int, params: Dictionary, command_id: String) -> void:
 	var node_path = params.get("node_path", "")

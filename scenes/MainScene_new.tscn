@@ -1,0 +1,28 @@
+[gd_scene load_steps=6 format=3 uid="uid://ouadyigymapl"]
+
+[ext_resource type="Script" uid="uid://bmxexmeccy3jl" path="res://scripts/GameManager.gd" id="1_aib6j"]
+[ext_resource type="Script" uid="uid://dkq2h70024pc0" path="res://scripts/PipeSpawner.gd" id="2_2d4lt"]
+[ext_resource type="PackedScene" uid="uid://ccsya3qk7cvuu" path="res://scenes/Pipe.tscn" id="3_ekalk"]
+[ext_resource type="Script" uid="uid://dcyytohqjq42j" path="res://scripts/UIManager.gd" id="4_1r2n0"]
+[ext_resource type="Script" uid="uid://dnckt2r131v6y" path="res://scripts/BackgroundManager.gd" id="5_t3vks"]
+
+[node name="MainScene" type="Node2D"]
+
+[node name="GameManager" type="Node2D" parent="."]
+script = ExtResource("1_aib6j")
+
+[node name="PipeSpawner" type="Node2D" parent="."]
+script = ExtResource("2_2d4lt")
+pipe_scene = ExtResource("3_ekalk")
+
+[node name="SpawnPosition" type="Marker2D" parent="PipeSpawner"]
+position = Vector2(800, 300)
+
+[node name="UIManager" type="CanvasLayer" parent="."]
+script = ExtResource("4_1r2n0")
+
+[node name="BackgroundManager" type="Node2D" parent="."]
+script = ExtResource("5_t3vks")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(576, 324)

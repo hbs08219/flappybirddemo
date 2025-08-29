@@ -1,14 +1,26 @@
-[gd_scene format=3 uid="uid://dxdda0bewn7dy"]
+[gd_scene load_steps=4 format=3 uid="uid://ccsya3qk7cvuu"]
+
+[ext_resource type="Shape2D" uid="uid://b2ui1p2votn5v" path="res://resources/pipe_collision_shape.tres" id="2_b7jht"]
+[ext_resource type="Texture2D" uid="uid://hfoi72swamra" path="res://assets/textures/水管.png" id="2_kwlx4"]
+[ext_resource type="Shape2D" uid="uid://cyiggm1o74mm7" path="res://resources/score_zone_shape.tres" id="3_b7jht"]
 
 [node name="Pipe" type="Node2D"]
 
-[node name="PipeContainer" type="Node2D" parent="."]
+[node name="TopPipe" type="Sprite2D" parent="."]
+position = Vector2(0, -150)
+texture = ExtResource("2_kwlx4")
 
-[node name="TopPipe" type="Sprite2D" parent="PipeContainer"]
-rotation = 3.14159
+[node name="BottomPipe" type="Sprite2D" parent="."]
+position = Vector2(0, 150)
+texture = ExtResource("2_kwlx4")
+flip_v = true
 
-[node name="TopPipeCollision" type="CollisionShape2D" parent="PipeContainer/TopPipe"]
+[node name="Collision" type="StaticBody2D" parent="."]
 
-[node name="BottomPipe" type="Sprite2D" parent="PipeContainer"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision"]
+shape = ExtResource("2_b7jht")
 
-[node name="BottomPipeCollision" type="CollisionShape2D" parent="PipeContainer/BottomPipe"]
+[node name="ScoreZone" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ScoreZone"]
+shape = ExtResource("3_b7jht")

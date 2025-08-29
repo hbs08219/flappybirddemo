@@ -1,66 +1,81 @@
-class_name PipeSpawner
 extends Node2D
 
-# 游戏参数
-const PIPE_SPEED = 200
-const PIPE_SPAWN_INTERVAL = 1.5
-const PIPE_GAP = 150
-const PIPE_Y_OFFSET_RANGE = 100
-const SCREEN_WIDTH = 800
+# 管道预制体
+@export var pipe_scene: PackedScene
+@export var pipe_speed: float = 200.0
+@export var pipe_spawn_time: float = 2.0
+@export var pipe_gap: float = 200.0
+@export var min_pipe_height: float = 100.0
+@export var max_pipe_height: float = 400.0
 
-# 状态变量
-var timer = 0.0
-var pipe_scene = null
+# 生成器状态
+var is_spawning: bool = false
+var spawn_timer: float = 0.0
+var pipes: Array[Node2D] = []
+
+# 节点引用
+@onready var spawn_position: Marker2D = $SpawnPosition
 
 func _ready():
-	# 加载管道场景
-	pipe_scene = load("res://scenes/Pipe.tscn")
-	# 初始化计时器
-	timer = 0.0
-
+	# 初始化生成器
+	if not pipe_scene:
+		print("Warning: No pipe scene set for PipeSpawner")
+		
 func _process(delta):
-	# 更新计时器
-	timer += delta
-	
-	# 检查是否需要生成新管道
-	if timer >= PIPE_SPAWN_INTERVAL:
+	if not is_spawning:
+		return
+		
+	# 更新生成计时器
+	spawn_timer -= delta
+	if spawn_timer <= 0:
 		spawn_pipe()
-		timer = 0.0
+		spawn_timer = pipe_spawn_time
+		
+	# 移动和清理管道
+	update_pipes(delta)
 	
-	# 移动所有管道
-	move_pipes(delta)
+func start_spawning():
+	# 开始生成管道
+	is_spawning = true
+	spawn_timer = pipe_spawn_time
+	print("Pipe spawning started")
 	
-	# 回收超出屏幕的管道
-	recycle_pipes()
-
+func stop_spawning():
+	# 停止生成管道
+	is_spawning = false
+	print("Pipe spawning stopped")
+	
 func spawn_pipe():
-	# 随机生成管道的Y轴偏移
-	var y_offset = randf_range(-PIPE_Y_OFFSET_RANGE, PIPE_Y_OFFSET_RANGE)
+	# 生成新管道
+	if not pipe_scene:
+		print("Error: Cannot spawn pipe - no pipe scene set")
+		return
+		
+	var pipe = pipe_scene.instantiate()
+	add_child(pipe)
+	pipes.append(pipe)
 	
-	# 实例化管道场景
-	var pipe_instance = pipe_scene.instantiate()
+	# 设置管道位置
+	pipe.position = spawn_position.position
+	print("Pipe spawned at: ", pipe.position)
 	
-	# 设置管道位置（屏幕右侧）
-	pipe_instance.position = Vector2(SCREEN_WIDTH + 50, y_offset)
-	
-	# 将管道添加到当前节点
-	add_child(pipe_instance)
-
-func move_pipes(delta):
-	# 移动所有管道
-	for pipe in get_children():
-		pipe.position.x -= PIPE_SPEED * delta
-
-func recycle_pipes():
-	# 回收超出屏幕左侧的管道
-	for pipe in get_children():
-		if pipe.position.x < -100:
-			pipe.queue_free()
-
-# 重置管道生成器
-func reset():
+func update_pipes(delta):
+	# 更新所有管道位置
+	for i in range(pipes.size() - 1, -1, -1):
+		var pipe = pipes[i]
+		if pipe:
+			# 移动管道
+			pipe.position.x -= pipe_speed * delta
+			
+			# 检查是否超出屏幕
+			if pipe.position.x < -200:
+				pipe.queue_free()
+				pipes.remove_at(i)
+				
+func clear_pipes():
 	# 清除所有管道
-	for pipe in get_children():
-		pipe.queue_free()
-	# 重置计时器
-	timer = 0.0
+	for pipe in pipes:
+		if pipe:
+			pipe.queue_free()
+	pipes.clear()
+	print("All pipes cleared")

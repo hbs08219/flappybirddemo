@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://dvwicc2dirnlx"]
-
-[node name="test_function_signal" type="Node"]
-
-[node name="TestNode" type="Node" parent="."]
-script = "res://scripts/test_function_signal_name.gd"
